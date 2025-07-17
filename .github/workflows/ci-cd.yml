@@ -90,10 +90,10 @@ jobs:
       run: |
         export KUBECONFIG=kubeconfig
         kubectl set image deployment/travel-backend \
-          travel-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }} \
+          travel-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest \
           -n app-travelexample
         kubectl set image deployment/travel-frontend \
-          travel-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} \
+          travel-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest \
           -n app-travelexample
 
     - name: Wait for deployment rollout
