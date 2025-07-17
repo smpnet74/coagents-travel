@@ -222,9 +222,11 @@ docker push ghcr.io/your-username/coagents-travel-frontend:latest
 
 ### GitHub Repository Secrets
 
-Configure the following secrets in your GitHub repository (Settings → Secrets and variables → Actions):
+Configure the following secrets in your GitHub repository as **Repository secrets** (not Environment secrets):
 
-#### Required Secrets:
+**Navigation**: GitHub repository → Settings → Secrets and variables → Actions → **Repository secrets** → "New repository secret"
+
+#### Required Repository Secrets:
 
 1. **`OPENAI_API_KEY`**
    - Description: OpenAI API key for AI functionality
@@ -241,6 +243,12 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 4. **`KUBECONFIG`**
    - Description: Base64-encoded kubeconfig for cluster access
    - Value: Run `base64 -i /path/to/kubeconfig` and paste the output
+
+**Important Notes:**
+- Use **Repository secrets** (available to all workflows in the repository)
+- **Do not use Environment secrets** (those are for specific deployment environments)
+- These secrets will be available to the GitHub Actions workflow when it runs
+- Never commit these values to your repository - they are sensitive credentials
 
 ### CI/CD Workflow
 
