@@ -8,11 +8,24 @@ import {
 } from "@copilotkit/runtime";
 import OpenAI from "openai";
 
-const openai = new OpenAI();
-const llmAdapter = new OpenAIAdapter({ openai } as any);
+// Lazy-load OpenAI client to avoid build-time initialization issues
+function createOpenAIAdapter() {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY!
+  });
+  return new OpenAIAdapter({ openai } as any);
+}
 const langsmithApiKey = process.env.LANGSMITH_API_KEY as string;
 
 export const POST = async (req: NextRequest) => {
+  // Check for required environment variables at runtime
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'build-time-placeholder') {
+    return new Response(
+      JSON.stringify({ error: 'OPENAI_API_KEY environment variable is required' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const searchParams = req.nextUrl.searchParams;
   const deploymentUrl = searchParams.get("lgcDeploymentUrl");
 
@@ -39,7 +52,7 @@ export const POST = async (req: NextRequest) => {
 
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,
-    serviceAdapter: llmAdapter,
+    serviceAdapter: createOpenAIAdapter(),
     endpoint: "/api/copilotkit",
   });
 

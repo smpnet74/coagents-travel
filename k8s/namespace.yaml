@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-travelexample
+  labels:
+    name: app-travelexample
+    istio.io/dataplane-mode: ambient  # Enable Istio Ambient Mesh

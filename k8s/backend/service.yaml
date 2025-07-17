@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: travel-backend-service
+  namespace: app-travelexample
+  labels:
+    app: travel-backend
+    component: backend
+spec:
+  selector:
+    app: travel-backend
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600  # 1 hour session stickiness for streaming connections

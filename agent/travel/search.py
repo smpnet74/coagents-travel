@@ -12,11 +12,23 @@ from langchain.tools import tool
 from copilotkit.langgraph import copilotkit_emit_state, copilotkit_customize_config
 from travel.state import AgentState
 
+# Global variable to hold the client instance
+_gmaps_client = None
+
+def get_gmaps_client():
+    """Get or create the Google Maps client instance."""
+    global _gmaps_client
+    if _gmaps_client is None:
+        api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_MAPS_API_KEY environment variable is required")
+        _gmaps_client = googlemaps.Client(key=api_key)
+    return _gmaps_client
+
 @tool
 def search_for_places(queries: list[str]) -> list[dict]:
     """Search for places based on a query, returns a list of places including their name, address, and coordinates."""
-
-gmaps = googlemaps.Client(key=os.getenv("GOOGLE_MAPS_API_KEY"))
+    gmaps = get_gmaps_client()
 
 async def search_node(state: AgentState, config: RunnableConfig):
     """
@@ -46,6 +58,7 @@ async def search_node(state: AgentState, config: RunnableConfig):
     await copilotkit_emit_state(config, state)
 
     places = []
+    gmaps = get_gmaps_client()
     for i, query in enumerate(queries):
         response = gmaps.places(query)
         for result in response.get("results", []):

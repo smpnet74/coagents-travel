@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: travel-frontend
+  namespace: app-travelexample
+  labels:
+    app: travel-frontend
+    component: frontend
+spec:
+  replicas: 1  # Single replica due to session state requirements
+  selector:
+    matchLabels:
+      app: travel-frontend
+  template:
+    metadata:
+      labels:
+        app: travel-frontend
+        component: frontend
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: travel-frontend
+        image: ghcr.io/smpnet74/coagents-travel-frontend:latest
+        imagePullPolicy: Always  # Always pull from registry
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: REMOTE_ACTION_URL
+          value: "http://travel-backend-service:8000/copilotkit"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: travel-secrets
+              key: OPENAI_API_KEY
+        - name: GOOGLE_MAPS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: travel-secrets
+              key: GOOGLE_MAPS_API_KEY
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 10

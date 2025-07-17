@@ -1,0 +1,25 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: travel-frontend-route
+  namespace: app-travelexample
+  annotations:
+    kgateway.dev/timeout: "300s"  # 5 minute timeout for AI operations
+    kgateway.dev/websocket: "true"  # Enable WebSocket support for CopilotKit streaming
+    kgateway.dev/buffering: "false"  # Disable response buffering for streaming
+    kgateway.dev/streaming: "true"  # Enable Server-Sent Events streaming
+spec:
+  parentRefs:
+  - name: default-gateway
+    namespace: default
+  hostnames:
+  - "travelexample.timbersedgearb.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: travel-frontend-service
+      port: 3000
+      weight: 100

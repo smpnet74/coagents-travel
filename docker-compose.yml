@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Backend service - Python LangGraph agent
+  backend:
+    build: 
+      context: ./agent
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    # volumes:
+      # Mount source code for development (optional) 
+      # - ./agent:/app:ro  # Disabled: overwrites built virtual environment
+    networks:
+      - travel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service - Next.js application
+  frontend:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - REMOTE_ACTION_URL=http://backend:8000/copilotkit
+      - NEXT_PUBLIC_CPK_PUBLIC_API_KEY=${NEXT_PUBLIC_CPK_PUBLIC_API_KEY:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - travel-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  travel-network:
+    driver: bridge
+
+# Optional: Add volumes for persistent data if needed in the future
+volumes:
+  backend-data:
+  frontend-data:

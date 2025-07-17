@@ -23,6 +23,12 @@ async def perform_trips_node(state: AgentState, config: RunnableConfig):
         return state
     
     if tool_message.content != "SEND":
+        # Check if tool_calls exists and is not empty
+        if not ai_message.tool_calls:
+            state["messages"].append(AIMessage(content="Error: No tool calls found in the message."))
+            await copilotkit_emit_message(config, "Error: No tool calls found in the message.")
+            return state
+            
         args = ai_message.tool_calls[0].get("args", {})
         trips = args.get("trips", [])
         lst = json.loads(tool_message.content)

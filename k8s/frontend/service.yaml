@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: travel-frontend-service
+  namespace: app-travelexample
+  labels:
+    app: travel-frontend
+    component: frontend
+spec:
+  selector:
+    app: travel-frontend
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600  # 1 hour session stickiness
