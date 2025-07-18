@@ -89,9 +89,9 @@ jobs:
           kubectl apply -f k8s/namespace.yaml
         fi
         
-        # Apply all manifests (kubectl apply is idempotent)
+        # Apply all manifests recursively (kubectl apply is idempotent)
         echo "Applying all Kubernetes manifests..."
-        kubectl apply -f k8s/
+        kubectl apply -f k8s/ --recursive
         echo "All manifests applied successfully"
 
     - name: Update Kubernetes secrets

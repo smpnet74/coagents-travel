@@ -527,8 +527,9 @@ kubectl rollout undo deployment/travel-frontend -n app-travelexample
 10. **Pipeline automatically handles**:
     - 🔍 Detects fresh vs. existing deployment
     - 🏗️ Creates namespace if needed
-    - 🐳 Builds and pushes images  
-    - 🚀 Deploys/updates applications
+    - 🐳 Builds and pushes images with `:latest` tag
+    - 🚀 Deploys new applications OR triggers rolling restarts for updates
+    - ⏱️ Handles deployment timing and readiness automatically
     - ✅ Validates deployment success
 
 11. **Monitor deployment** in GitHub Actions tab
@@ -615,17 +616,23 @@ kubectl get events -n app-travelexample                  # Check events
 
 ### GitOps Deployment Issues
 
-#### Most Common Issue: Namespace Not Found
-**Error**: `Error from server (NotFound): error when creating "STDIN": namespaces "app-travelexample" not found`
+#### Most Common Issues (Both Fixed!)
 
-**Cause**: This happens when deploying to a fresh/destroyed cluster where the namespace doesn't exist yet.
+**Error 1**: `Error from server (NotFound): error when creating "STDIN": namespaces "app-travelexample" not found`
 
-**Solution**: ✅ **Already Fixed!** The GitOps pipeline now automatically handles this:
-- Detects if namespace exists
-- Creates namespace if missing  
-- Continues with deployment
+**Cause**: Deploying to a fresh/destroyed cluster where the namespace doesn't exist.
 
-**If you see this error**: Your pipeline version is outdated. Ensure you have the latest `.github/workflows/ci-cd.yml` from this repository.
+**Solution**: ✅ **Fixed!** Pipeline now automatically detects and creates missing namespaces.
+
+**Error 2**: `Error from server (NotFound): deployments.apps "travel-backend" not found`
+
+**Cause**: Pipeline trying to update deployments before they're fully created on fresh deployments.
+
+**Solution**: ✅ **Fixed!** Pipeline now intelligently handles both scenarios:
+- **Fresh deployments**: Waits for deployments to become available
+- **Existing deployments**: Triggers rolling restart to pull new images
+
+**If you see these errors**: Your pipeline version is outdated. Ensure you have the latest `.github/workflows/ci-cd.yml` from this repository.
 
 #### GitHub Actions Issues
 - **Workflow not triggering**: Check if workflow file is enabled (not .disabled)
@@ -657,6 +664,7 @@ gh run view <run-id>
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | **Namespace "app-travelexample" not found** | Fresh cluster, namespace doesn't exist | ✅ Fixed in latest GitOps pipeline - update your workflow file |
+| **Deployments "travel-backend" not found** | Pipeline trying to update non-existent deployments | ✅ Fixed in latest GitOps pipeline - update your workflow file |
 | **Port 3000 already in use** | Another service using port | `lsof -ti:3000 \| xargs kill -9` |
 | **Backend not accessible** | Wrong host binding | Change `0.0.0.0` to `127.0.0.1` in demo.py |
 | **Frontend can't reach backend** | Network configuration | Check REMOTE_ACTION_URL in docker-compose.yml |
