@@ -97,9 +97,19 @@ jobs:
     - name: Update Kubernetes secrets
       run: |
         export KUBECONFIG=kubeconfig
+        
+        # Create API secrets
         kubectl create secret generic travel-secrets \
           --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
           --from-literal=GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}" \
+          --namespace=app-travelexample \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Create Docker registry secret for GHCR
+        kubectl create secret docker-registry ghcr-secret \
+          --docker-server=ghcr.io \
+          --docker-username=${{ github.actor }} \
+          --docker-password=${{ secrets.GHCR_TOKEN }} \
           --namespace=app-travelexample \
           --dry-run=client -o yaml | kubectl apply -f -
 
