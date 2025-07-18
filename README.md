@@ -4,12 +4,38 @@ This example contains a Travel Planner application with search capabilities usin
 
 **These instructions assume you are in the `coagents-travel/` directory**
 
+## ⚠️ **Quick Setup for Your Own Repository**
+
+This project contains references to specific GitHub usernames and domains that you need to customize:
+
+### **Required Customizations:**
+
+1. **GitHub Container Registry Images** (in `k8s/*/deployment.yaml`):
+   ```yaml
+   # Change from:
+   image: ghcr.io/smpnet74/coagents-travel-backend:latest
+   # To:
+   image: ghcr.io/YOUR-USERNAME/coagents-travel-backend:latest
+   ```
+
+2. **Domain Name** (in `k8s/frontend/httproute.yaml`):
+   ```yaml
+   # Change from:
+   hostnames: ["travelexample.timbersedgearb.com"]
+   # To:
+   hostnames: ["your-domain.com"]
+   ```
+
+3. **GitHub Organization** (in `.github/workflows/ci-cd.yml`):
+   - The workflow automatically uses your repository name, but verify the image names match your desired naming convention
+
 ## Deployment Modes
 
-This application supports two deployment modes:
+This application supports multiple deployment modes with intelligent GitOps:
 
 - **Local Development Mode**: Run locally with hot-reload for development
-- **GitOps Mode**: Automated CI/CD deployment to Kubernetes cluster
+- **Manual Kubernetes Deployment**: Deploy using automated scripts (`scripts/deploy-k8s.sh`)
+- **GitOps Mode**: Automated CI/CD deployment that handles both fresh deployments and updates
 
 ### GitOps Toggle
 
@@ -150,13 +176,35 @@ The application will be available at [http://localhost:3000](http://localhost:30
 - **Health checks**: Automatic service health monitoring
 - **Easy cleanup**: `docker-compose down` removes everything
 
-### Method 3: Manual Kubernetes Deployment (Production Testing)
+### Method 3: Automated Kubernetes Deployment (Recommended)
 
-**Best for**: Testing production deployment before enabling GitOps
+**Best for**: Production-ready deployment with automated scripts
 
 **Prerequisites**: 
 - Kubernetes cluster access
-- Images available in GHCR (use Method 4 to build/push first)
+- `.env` file with API keys
+- Images will be pulled from GHCR (script guides you through building/pushing if needed)
+
+```bash
+# Use the automated deployment script
+./scripts/deploy-k8s.sh
+```
+
+**The script automatically:**
+- ✅ Validates prerequisites (kubectl, .env file, API keys)
+- ✅ Creates namespace if it doesn't exist
+- ✅ Creates secrets securely from .env file
+- ✅ Deploys all manifests in correct order
+- ✅ Waits for pods to be ready
+- ✅ Shows deployment status and troubleshooting info
+
+### Method 4: Manual Kubernetes Deployment (Advanced)
+
+**Best for**: Understanding the deployment process or custom requirements
+
+**Prerequisites**: 
+- Kubernetes cluster access
+- Images available in GHCR (build/push first)
 
 ```bash
 # 1. Apply Kubernetes manifests
@@ -252,12 +300,29 @@ Configure the following secrets in your GitHub repository as **Repository secret
 
 ### CI/CD Workflow
 
-The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) automatically:
+The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) is **intelligent and idempotent**, automatically handling both fresh deployments and updates:
 
-1. **Builds** Docker images for backend and frontend
-2. **Pushes** images to GitHub Container Registry (GHCR)
-3. **Deploys** to Kubernetes cluster in `app-travelexample` namespace
-4. **Verifies** deployment success
+#### **For Fresh Deployments** (destroyed/new clusters):
+1. **Detects** missing namespace and creates it
+2. **Builds** Docker images for backend and frontend  
+3. **Pushes** images to GitHub Container Registry (GHCR)
+4. **Applies** all Kubernetes manifests
+5. **Creates/Updates** secrets and deployments
+6. **Verifies** deployment success
+
+#### **For Updates** (existing deployments):
+1. **Detects** existing namespace and skips creation
+2. **Builds** new Docker images with latest code
+3. **Pushes** updated images to GHCR
+4. **Updates** existing deployments with new images
+5. **Verifies** rollout completion
+
+#### **GitOps Pipeline Features:**
+- ✅ **Idempotent**: Safe to run multiple times
+- ✅ **Intelligent**: Adapts to fresh vs. existing deployments  
+- ✅ **Automated**: No manual intervention required
+- ✅ **Safe**: Validates each step before proceeding
+- ✅ **Fast**: Only updates what's changed
 
 ### Deployment Process
 
@@ -310,6 +375,51 @@ kubectl logs -n app-travelexample -l app=travel-frontend
 kubectl logs -n app-travelexample -l app=travel-backend
 ```
 
+## 🚀 **Deployment Scenarios Explained**
+
+Understanding when to use each deployment method:
+
+### **Scenario 1: Fresh Development Setup**
+**Situation**: New repository, first time setup  
+**Goal**: Get development environment running quickly  
+**Method**: Local Development (Method 1 or 2)
+```bash
+# Quick start for development
+cp .env.example .env  # Add your API keys
+docker-compose up --build
+```
+
+### **Scenario 2: Testing Production Deployment**  
+**Situation**: Want to test Kubernetes deployment before GitOps  
+**Goal**: Validate manifests work correctly  
+**Method**: Automated Kubernetes Deployment (Method 3)
+```bash
+./scripts/deploy-k8s.sh
+```
+
+### **Scenario 3: Fresh Cluster Deployment**
+**Situation**: New/destroyed Kubernetes cluster, nothing exists  
+**Goal**: Deploy application via GitOps automation  
+**Method**: GitOps Mode
+- Pipeline automatically creates namespace and all resources
+- Handles complete fresh deployment
+
+### **Scenario 4: Development Updates**
+**Situation**: Existing deployment, making code changes  
+**Goal**: Update running application  
+**Method**: GitOps Mode
+- Pipeline detects existing resources and updates them
+- Only rebuilds/redeploys what changed
+
+### **Scenario 5: Emergency Rollback**
+**Situation**: Something went wrong with latest deployment  
+**Goal**: Quick return to working state  
+**Method**: Manual rollback
+```bash
+kubectl rollout undo deployment/travel-backend -n app-travelexample
+kubectl rollout undo deployment/travel-frontend -n app-travelexample
+```
+
 ## Architecture
 
 ### Application Components
@@ -333,26 +443,33 @@ kubectl logs -n app-travelexample -l app=travel-backend
 
 ## Development Workflow
 
-### Recommended Development Process
+### **Recommended Development Process** 🎯
 
-#### Phase 1: Inner Loop Development
+#### **Phase 1: Inner Loop Development**
 
 **Goal**: Fast iteration with hot-reload
 
-1. **Ensure GitOps is disabled** (default state):
+1. **Customize for your repository** (one-time setup):
+   ```bash
+   # Update image references in k8s/*/deployment.yaml
+   # Update domain in k8s/frontend/httproute.yaml  
+   # See "Required Customizations" section above
+   ```
+
+2. **Ensure GitOps is disabled** (default state):
    ```bash
    # Verify GitOps is disabled
    ls .github/workflows/ci-cd.yml.disabled  # Should exist
    ```
 
-2. **Set up environment**:
+3. **Set up environment**:
    ```bash
    # Create .env file from template and add your actual API keys
    cp .env.example .env
    # Edit .env file with your actual API keys
    ```
 
-3. **Start development** (choose your preferred method):
+4. **Start development** (choose your preferred method):
    ```bash
    # Method 1: Individual services (fastest)
    cd agent && poetry run demo &
@@ -362,34 +479,28 @@ kubectl logs -n app-travelexample -l app=travel-backend
    docker-compose up --build
    ```
 
-4. **Develop and test** at `http://localhost:3000`
+5. **Develop and test** at `http://localhost:3000`
 
-#### Phase 2: Pre-Production Testing
+#### **Phase 2: Pre-Production Testing**
 
-**Goal**: Test in production-like environment
+**Goal**: Test in production-like environment with automated tools
 
-5. **Test with Docker Compose** (if using Method 1):
+6. **Test Kubernetes deployment** using automated script:
    ```bash
-   docker-compose up --build
+   # This handles everything: namespace, secrets, deployment
+   ./scripts/deploy-k8s.sh
    ```
 
-6. **Optional: Test manual Kubernetes deployment**:
-   ```bash
-   # Build and push images
-   docker build -t ghcr.io/your-username/coagents-travel-backend:latest ./agent
-   docker build -t ghcr.io/your-username/coagents-travel-frontend:latest ./ui
-   echo $GHCR_TOKEN | docker login ghcr.io -u your-username --password-stdin
-   docker push ghcr.io/your-username/coagents-travel-backend:latest
-   docker push ghcr.io/your-username/coagents-travel-frontend:latest
-   
-   # Deploy to test cluster
-   kubectl apply -f k8s/
-   kubectl port-forward -n app-travelexample service/travel-frontend-service 8080:3000
-   ```
+   **Script benefits:**
+   - ✅ Validates prerequisites automatically
+   - ✅ Creates namespace if missing
+   - ✅ Handles secrets securely
+   - ✅ Shows detailed deployment status
+   - ✅ Provides troubleshooting info
 
-#### Phase 3: Production Deployment
+#### **Phase 3: Production Deployment**
 
-**Goal**: Automated deployment via GitOps
+**Goal**: Automated deployment via intelligent GitOps
 
 7. **Set up GitHub secrets** (one-time setup):
    - `OPENAI_API_KEY`: Your OpenAI API key
@@ -409,16 +520,26 @@ kubectl logs -n app-travelexample -l app=travel-backend
    git push origin main
    ```
 
-10. **Monitor deployment** in GitHub Actions tab
+10. **Pipeline automatically handles**:
+    - 🔍 Detects fresh vs. existing deployment
+    - 🏗️ Creates namespace if needed
+    - 🐳 Builds and pushes images  
+    - 🚀 Deploys/updates applications
+    - ✅ Validates deployment success
 
-### Development Best Practices
+11. **Monitor deployment** in GitHub Actions tab
 
-- **Start with Method 1** for fastest development iteration
-- **Use Docker Compose** to test containerized environment
-- **Test manual Kubernetes deployment** before enabling GitOps
-- **Keep GitOps disabled** during active development
+### **Development Best Practices** ⭐
+
+- **Start with Local Development** for fastest iteration cycles
+- **Use automated deployment script** (`./scripts/deploy-k8s.sh`) for reliable Kubernetes testing
+- **Customize repository settings** before first deployment (images, domain)
+- **Test with automated script** before enabling GitOps
+- **Keep GitOps disabled** during active development to prevent accidental deployments
 - **Use feature branches** for experimental changes
-- **Always test locally** before pushing to main with GitOps enabled
+- **Leverage intelligent GitOps** - it handles fresh deployments and updates automatically
+- **Monitor GitHub Actions** for deployment status and troubleshooting
+- **Use rollback commands** for quick recovery if needed
 
 ### Rollback
 
@@ -490,9 +611,21 @@ kubectl get events -n app-travelexample                  # Check events
 
 ### GitOps Deployment Issues
 
+#### Most Common Issue: Namespace Not Found
+**Error**: `Error from server (NotFound): error when creating "STDIN": namespaces "app-travelexample" not found`
+
+**Cause**: This happens when deploying to a fresh/destroyed cluster where the namespace doesn't exist yet.
+
+**Solution**: ✅ **Already Fixed!** The GitOps pipeline now automatically handles this:
+- Detects if namespace exists
+- Creates namespace if missing  
+- Continues with deployment
+
+**If you see this error**: Your pipeline version is outdated. Ensure you have the latest `.github/workflows/ci-cd.yml` from this repository.
+
 #### GitHub Actions Issues
 - **Workflow not triggering**: Check if workflow file is enabled (not .disabled)
-- **Build failures**: Check GitHub Actions logs for specific error messages
+- **Build failures**: Check GitHub Actions logs for specific error messages  
 - **Push to GHCR fails**: Verify GHCR_TOKEN permissions and repository settings
 
 ```bash
@@ -507,10 +640,19 @@ gh run view <run-id>
 - **kubectl access denied**: Ensure KUBECONFIG is properly base64 encoded
 - **Image pull errors**: Check GHCR_TOKEN has `packages:write` permission
 
+#### Deployment Scenarios Troubleshooting
+
+| Scenario | Expected Behavior | Troubleshooting |
+|----------|------------------|-----------------|
+| **Fresh Cluster** | Pipeline creates namespace, applies manifests, deploys images | Check GitHub Actions logs for manifest application errors |
+| **Existing Development** | Pipeline skips namespace creation, updates deployments | Verify existing deployments can be updated |
+| **Failed Previous Deploy** | Pipeline recreates failed resources | Check for stuck resources: `kubectl get all -n app-travelexample` |
+
 ### Common Issues and Solutions
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
+| **Namespace "app-travelexample" not found** | Fresh cluster, namespace doesn't exist | ✅ Fixed in latest GitOps pipeline - update your workflow file |
 | **Port 3000 already in use** | Another service using port | `lsof -ti:3000 \| xargs kill -9` |
 | **Backend not accessible** | Wrong host binding | Change `0.0.0.0` to `127.0.0.1` in demo.py |
 | **Frontend can't reach backend** | Network configuration | Check REMOTE_ACTION_URL in docker-compose.yml |
@@ -519,6 +661,7 @@ gh run view <run-id>
 | **GitHub Actions fails** | Missing secrets | Check all required secrets are configured |
 | **Image pull fails** | Authentication issue | Verify GHCR_TOKEN and image permissions |
 | **Pod crash loop** | Application error | Check pod logs with `kubectl logs` |
+| **GitOps pipeline stuck** | Resource conflicts | Check for existing resources and clean up manually |
 
 ### Getting Help
 
@@ -534,4 +677,3 @@ gh run view <run-id>
 - **Backend state**: Current implementation uses in-memory state (single replica)
 - **Monitoring**: Add health checks and monitoring for production use
 - **Security**: Rotate API keys regularly and use proper RBAC
-testing again

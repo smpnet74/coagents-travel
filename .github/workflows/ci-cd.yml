@@ -77,6 +77,23 @@ jobs:
         echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
 
+    - name: Apply Kubernetes manifests
+      run: |
+        export KUBECONFIG=kubeconfig
+        
+        # Check if namespace exists, create if it doesn't
+        if kubectl get namespace app-travelexample >/dev/null 2>&1; then
+          echo "Namespace app-travelexample already exists, skipping creation"
+        else
+          echo "Creating namespace app-travelexample"
+          kubectl apply -f k8s/namespace.yaml
+        fi
+        
+        # Apply all manifests (kubectl apply is idempotent)
+        echo "Applying all Kubernetes manifests..."
+        kubectl apply -f k8s/
+        echo "All manifests applied successfully"
+
     - name: Update Kubernetes secrets
       run: |
         export KUBECONFIG=kubeconfig
