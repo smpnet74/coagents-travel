@@ -103,15 +103,20 @@ jobs:
           --namespace=app-travelexample \
           --dry-run=client -o yaml | kubectl apply -f -
 
-    - name: Update deployment images
+    - name: Deploy or update application
       run: |
         export KUBECONFIG=kubeconfig
-        kubectl set image deployment/travel-backend \
-          travel-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest \
-          -n app-travelexample
-        kubectl set image deployment/travel-frontend \
-          travel-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest \
-          -n app-travelexample
+        
+        # Check if deployments exist
+        if kubectl get deployment travel-backend -n app-travelexample >/dev/null 2>&1; then
+          echo "Deployments exist - triggering rolling update to pull new images"
+          kubectl rollout restart deployment/travel-backend -n app-travelexample
+          kubectl rollout restart deployment/travel-frontend -n app-travelexample
+        else
+          echo "Fresh deployment - waiting for deployments to be created and become available"
+          kubectl wait --for condition=Available --timeout=300s deployment/travel-backend -n app-travelexample
+          kubectl wait --for condition=Available --timeout=300s deployment/travel-frontend -n app-travelexample
+        fi
 
     - name: Wait for deployment rollout
       run: |

@@ -307,15 +307,17 @@ The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) is **intelligent and
 2. **Builds** Docker images for backend and frontend  
 3. **Pushes** images to GitHub Container Registry (GHCR)
 4. **Applies** all Kubernetes manifests
-5. **Creates/Updates** secrets and deployments
-6. **Verifies** deployment success
+5. **Creates/Updates** secrets 
+6. **Waits** for deployments to become available
+7. **Verifies** deployment success
 
 #### **For Updates** (existing deployments):
 1. **Detects** existing namespace and skips creation
 2. **Builds** new Docker images with latest code
-3. **Pushes** updated images to GHCR
-4. **Updates** existing deployments with new images
-5. **Verifies** rollout completion
+3. **Pushes** updated images to GHCR with `:latest` tag
+4. **Applies** manifest updates (if any)
+5. **Triggers** rolling restart to pull new images
+6. **Verifies** rollout completion
 
 #### **GitOps Pipeline Features:**
 - ✅ **Idempotent**: Safe to run multiple times
@@ -323,6 +325,8 @@ The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) is **intelligent and
 - ✅ **Automated**: No manual intervention required
 - ✅ **Safe**: Validates each step before proceeding
 - ✅ **Fast**: Only updates what's changed
+- ✅ **Robust**: Handles deployment timing issues automatically
+- ✅ **Image Management**: Uses `:latest` tags with rolling restarts for updates
 
 ### Deployment Process
 
@@ -677,3 +681,4 @@ gh run view <run-id>
 - **Backend state**: Current implementation uses in-memory state (single replica)
 - **Monitoring**: Add health checks and monitoring for production use
 - **Security**: Rotate API keys regularly and use proper RBAC
+test4
