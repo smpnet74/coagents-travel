@@ -8,6 +8,8 @@
 # Kubernetes secrets (if any temporary files are created)
 k8s-secrets-*.yaml
 secrets-temp*.yaml
+k8s/secrets*.yaml
+k8s/**/secrets*.yaml
 
 # Node.js
 node_modules/

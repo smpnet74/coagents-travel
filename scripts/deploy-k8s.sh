@@ -101,7 +101,7 @@ kubectl create secret generic travel-secrets \
     --from-literal=GOOGLE_MAPS_API_KEY="$GOOGLE_MAPS_API_KEY" \
     --dry-run=client -o yaml | kubectl apply -f -
 
-# Apply other manifests (excluding secrets.yaml since we created secrets directly)
+# Apply other manifests (secrets are created directly above, not from files)
 echo -e "${YELLOW}🚀 Deploying application...${NC}"
 
 # Apply reference grant for cross-namespace access
