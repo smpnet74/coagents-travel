@@ -100,9 +100,14 @@ jobs:
         
         # Force clean recreation of API secrets (delete first to ensure clean state)
         kubectl delete secret travel-secrets -n app-travelexample --ignore-not-found=true
+        
+        # Clean any whitespace/newlines from secrets before creating
+        CLEAN_OPENAI_KEY=$(echo -n "${{ secrets.OPENAI_API_KEY }}" | tr -d '\n\r\t ')
+        CLEAN_GOOGLE_KEY=$(echo -n "${{ secrets.GOOGLE_MAPS_API_KEY }}" | tr -d '\n\r\t ')
+        
         kubectl create secret generic travel-secrets \
-          --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-          --from-literal=GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}" \
+          --from-literal=OPENAI_API_KEY="$CLEAN_OPENAI_KEY" \
+          --from-literal=GOOGLE_MAPS_API_KEY="$CLEAN_GOOGLE_KEY" \
           --namespace=app-travelexample
         
         # Force clean recreation of Docker registry secret  
